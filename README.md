@@ -1,23 +1,52 @@
-# Node Login App
+# Graduate Research Platform
 
-This project is a simple Node.js application that provides user login functionality using a MongoDB backend. It allows users to register and log in securely.
+A full-stack platform for graduate research management, supporting students and faculty with user registration/login, document submission and review, grading, chat, and search. All operations are handled via backend APIs with role-based UI and logic.
+
+## Features
+- User registration and login (JWT-based)
+- Role-based dashboards for students and faculty
+- Document submission (with file upload)
+- Document review and grading by faculty
+- Chat between students and faculty
+- Search for users, documents, and feedback
+- Download and view uploaded documents
+- All data operations via backend APIs (no static/in-memory frontend data)
 
 ## Project Structure
-
 ```
-node-login-app
-├── src
-│   ├── app.js                # Entry point of the application
-│   ├── controllers           # Contains authentication logic
-│   │   └── authController.js
-│   ├── models                # Mongoose models for the application
+graduate-research-platform/
+├── src/
+│   ├── app.js                # Main backend entry point
+│   ├── swagger.js            # Swagger API docs setup
+│   ├── config/
+│   │   └── db.js             # MongoDB connection
+│   ├── controllers/          # API controllers
+│   │   ├── authController.js
+│   │   ├── chatController.js
+│   │   ├── documentController.js
+│   │   ├── gradeController.js
+│   │   └── searchController.js
+│   ├── models/               # Mongoose models
+│   │   ├── chat.js
+│   │   ├── document.js
+│   │   ├── grade.js
 │   │   └── user.js
-│   ├── routes                # API routes for authentication
-│   │   └── auth.js
-│   └── config                # Configuration files
-│       └── db.js
-├── package.json              # NPM package configuration
-└── README.md                 # Project documentation
+│   └── routes/               # Express API routes
+│       ├── auth.js
+│       ├── chat.js
+│       ├── document.js
+│       ├── grade.js
+│       ├── search.js
+│       └── user.js
+├── public/                   # Frontend (HTML, CSS, JS)
+│   ├── index.html
+│   ├── css/
+│   ├── js/
+│   └── templates/
+├── uploads/                  # Uploaded documents (gitignored)
+├── package.json
+├── .gitignore
+└── README.md
 ```
 
 ## Installation
@@ -26,39 +55,43 @@ node-login-app
    ```
    git clone <repository-url>
    ```
-
 2. Navigate to the project directory:
    ```
-   cd node-login-app
+   cd graduate-research-platform
    ```
-
-3. Install the dependencies:
+3. Install dependencies:
    ```
    npm install
    ```
-
-## Usage
-
-1. Start the MongoDB server if it's not already running.
-
-2. Run the application:
+4. Create a `.env` file in the root directory and set your MongoDB URI and JWT secret:
+   ```
+   MONGODB_URI=mongodb://localhost:27017/graduate-research-platform
+   JWT_SECRET=your_jwt_secret
+   ```
+5. Start the application:
    ```
    npm start
    ```
 
-3. The application will be running on `http://localhost:3000`.
+## Usage
+- The app will run on `http://localhost:5000` by default.
+- Access the frontend at the root URL.
+- API endpoints are under `/api/`.
 
-## API Endpoints
+## API Endpoints (examples)
+- `POST /api/auth/register` — Register a new user
+- `POST /api/auth/login` — Log in
+- `POST /api/documents` — Submit a document (multipart/form-data)
+- `GET /api/documents/review` — List documents for review
+- `POST /api/documents/:id/review` — Submit review/grade
+- `GET /api/search` — Search users, documents, feedback
+- `GET /api/chat` — Get/send chat messages
 
-- **POST /api/auth/register**: Register a new user.
-- **POST /api/auth/login**: Log in an existing user.
-
-## Dependencies
-
-- Express: Web framework for Node.js
-- Mongoose: MongoDB object modeling tool
-- Bcrypt: Library for hashing passwords
+## Tech Stack
+- Node.js, Express, MongoDB, Mongoose
+- Multer (file uploads)
+- JWT (authentication)
+- Bootstrap, Vanilla JS (frontend)
 
 ## License
-
-This project is licensed under the MIT License.# graduate-research-platform
+MIT License

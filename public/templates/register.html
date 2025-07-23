@@ -1,0 +1,237 @@
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h2 class="card-title text-center mb-4">Register</h2>
+                <form id="registerForm" novalidate>
+                    <!-- Name Field -->
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="name" 
+                               placeholder="Enter your full name"
+                               minlength="3" maxlength="50" 
+                               pattern="^[a-zA-Z\s\-']+$"
+                               title="Name should only contain letters, spaces, hyphens, and apostrophes" 
+                               required>
+                        <div class="invalid-feedback">Please enter a valid name (3-50 characters, only letters, spaces, hyphens, and apostrophes)</div>
+                        <div class="form-text">Minimum 3 characters, maximum 50. Only letters, spaces, hyphens, and apostrophes allowed.</div>
+                    </div>
+
+                    <!-- Email Field -->
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" 
+                               placeholder="Enter your email"
+                               pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$" 
+                               title="Please enter a valid email address (e.g., user@example.com)" 
+                               required>
+                        <div class="invalid-feedback">Please enter a valid email address</div>
+                        <div class="form-text">Must be a valid email address (e.g., user@example.com)</div>
+                    </div>
+
+                    <!-- Password Field -->
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="password" 
+                                   placeholder="Enter your password"
+                                   minlength="6" 
+                                   pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$" 
+                                   title="Password must contain at least 6 characters, including uppercase, lowercase, and number" 
+                                   required>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Password must contain at least 6 characters with uppercase, lowercase, and number</div>
+                        <div class="form-text">
+                            Password must contain:
+                            <ul class="list-unstyled">
+                                <li><small>• Minimum 6 characters</small></li>
+                                <li><small>• At least one uppercase letter</small></li>
+                                <li><small>• At least one lowercase letter</small></li>
+                                <li><small>• At least one number</small></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Confirm Password</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="confirmPassword" 
+                                   placeholder="Confirm your password" 
+                                   required>
+                            <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Passwords must match</div>
+                    </div>
+
+                    <!-- Role Selection -->
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Role</label>
+                        <select class="form-select" id="role" required>
+                            <option value="">Select Role</option>
+                            <option value="student">Student</option>
+                            <option value="faculty">Faculty</option>
+                        </select>
+                        <div class="invalid-feedback">Please select your role</div>
+                    </div>
+
+                    <!-- Department Field -->
+                    <div class="mb-3">
+                        <label for="department" class="form-label">Department</label>
+                        <select class="form-select" id="department" required>
+                            <option value="">Select Department</option>
+                            <option value="Computer Science">Computer Science</option>
+                            <option value="Software Engineering">Software Engineering</option>
+                            <option value="Mathematics">Mathematics</option>
+                            <option value="Physics">Physics</option>
+                        </select>
+                        <div class="invalid-feedback">Please select your department</div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">Register</button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="loadLogin()">Back to Login</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle password visibility
+    const togglePassword = document.getElementById('togglePassword');
+    const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirmPassword');
+
+    [togglePassword, toggleConfirmPassword].forEach((button, index) => {
+        button.addEventListener('click', function() {
+            const field = index === 0 ? password : confirmPassword;
+            const icon = button.querySelector('i');
+            const type = field.getAttribute('type') === 'password' ? 'text' : 'password';
+            field.setAttribute('type', type);
+            icon.classList.toggle('fa-eye-slash');
+            icon.classList.toggle('fa-eye');
+        });
+    });
+
+    // Password confirmation validation
+    function validatePasswordConfirmation() {
+        if (password.value !== confirmPassword.value) {
+            confirmPassword.setCustomValidity("Passwords must match");
+            confirmPassword.classList.add('is-invalid');
+            return false;
+        } else {
+            confirmPassword.setCustomValidity('');
+            confirmPassword.classList.remove('is-invalid');
+            return true;
+        }
+    }
+
+    // Real-time validation for password confirmation
+    password.addEventListener('input', validatePasswordConfirmation);
+    confirmPassword.addEventListener('input', validatePasswordConfirmation);
+
+    // Form submission
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validate all fields
+        const isValid = this.checkValidity();
+        const passwordsMatch = validatePasswordConfirmation();
+        
+        if (!isValid || !passwordsMatch) {
+            e.stopPropagation();
+            this.classList.add('was-validated');
+            
+            // Scroll to first invalid field
+            const firstInvalid = this.querySelector('.is-invalid, :invalid');
+            if (firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstInvalid.focus();
+            }
+            
+            return;
+        }
+
+        const formData = {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            password: password.value,
+            role: document.getElementById('role').value,
+            department: document.getElementById('department').value
+        };
+        
+        // Check if email already exists
+        if (users.some(user => user.email === formData.email)) {
+            showAlert('This email is already registered. Please use a different email.', 'danger');
+            document.getElementById('email').classList.add('is-invalid');
+            document.getElementById('email').focus();
+            return;
+        }
+        
+        const newUser = register(formData);
+        if (newUser) {
+            showAlert('Registration successful! Please login.', 'success');
+            setTimeout(() => loadLogin(), 1500);
+        }
+    });
+
+    // Add input validation on blur
+    document.querySelectorAll('#registerForm input, #registerForm select').forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.checkValidity()) {
+                this.classList.remove('is-invalid');
+            } else {
+                this.classList.add('is-invalid');
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.was-validated .form-control:valid,
+.was-validated .form-control:invalid {
+    background-position: right calc(0.375em + 0.1875rem) center;
+    padding-right: 2.25rem;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.was-validated .form-control:valid {
+    border-color: #28a745;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+}
+
+.was-validated .form-control:invalid {
+    border-color: #dc3545;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23dc3545' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+}
+
+.form-text ul {
+    margin-top: 0.25rem;
+    margin-bottom: 0;
+}
+
+.invalid-feedback {
+    display: none;
+}
+
+.is-invalid ~ .invalid-feedback,
+.is-invalid ~ div > .invalid-feedback {
+    display: block;
+}
+
+/* Better spacing for form elements */
+.mb-3 {
+    margin-bottom: 1.25rem !important;
+}
+</style>

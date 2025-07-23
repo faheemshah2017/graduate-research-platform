@@ -1,0 +1,318 @@
+// Faculty-specific functions
+
+// Load document review
+async function loadDocumentReview() {
+    const response = await fetch('/api/documents/review');
+    const documents = await response.json();
+    let rows = documents.map(doc => `
+        <tr>
+            <td>${doc.title}</td>
+            <td>${doc.student?.name || ''}</td>
+            <td>${doc.type}</td>
+            <td>${new Date(doc.submissionDate).toLocaleDateString()}</td>
+            <td><span class="badge ${doc.status === 'Pending Review' ? 'bg-warning text-dark' : doc.status === 'In Progress' ? 'bg-info' : doc.status === 'Approved' ? 'bg-success' : 'bg-danger'}">${doc.status}</span></td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="reviewDocument('${doc._id}')">
+                    <i class="fas fa-file-alt"></i> Review
+                </button>
+            </td>
+        </tr>
+    `).join('');
+    const reviewHtml = `
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Document Review</h1>
+            <div class="btn-toolbar mb-2 mb-md-0">
+                <div class="btn-group me-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Documents to Review</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Student</th>
+                                <th>Type</th>
+                                <th>Submission Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('content-container').innerHTML = reviewHtml;
+}
+
+// Review document
+async function reviewDocument(docId) {
+    const response = await fetch(`/api/documents/${docId}`);
+    const doc = await response.json();
+    const reviewHtml = `
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Review Document</h1>
+            <div class="btn-toolbar mb-2 mb-md-0">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadDocumentReview()">
+                    <i class="fas fa-arrow-left"></i> Back to List
+                </button>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Document Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Title:</strong> ${doc.title}</p>
+                        <p><strong>Student:</strong> ${doc.student?.name || ''}</p>
+                        <p><strong>Type:</strong> ${doc.type}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Submission Date:</strong> ${new Date(doc.submissionDate).toLocaleDateString()}</p>
+                        <p><strong>Status:</strong> <span class="badge bg-warning text-dark">${doc.status}</span></p>
+                        <p><strong>Advisor:</strong> ${doc.advisor?.name || ''}</p>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-primary me-2" onclick="window.open('/api/documents/${doc._id}/download', '_blank')">
+                        <i class="fas fa-download"></i> Download Document
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="window.open('/api/documents/${doc._id}/view', '_blank')">
+                        <i class="fas fa-eye"></i> View Online
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5>Review & Feedback</h5>
+            </div>
+            <div class="card-body">
+                <form id="reviewForm">
+                    <div class="mb-3">
+                        <label for="overallComments" class="form-label">Overall Comments</label>
+                        <textarea class="form-control" id="overallComments" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Grading</label>
+                                <select class="form-select" id="Grade" required>
+                                    <option value="">Select Grade</option>
+                                    <option value="A">A (90-100%)</option>
+                                    <option value="B">B (80-89%)</option>
+                                    <option value="C">C (70-79%)</option>
+                                    <option value="D">D (60-69%)</option>
+                                    <option value="F">F (Below 60%)</option>
+                                </select>
+                    <div class="mb-3">
+                        <label for="recommendation" class="form-label">Recommendation</label>
+                        <select class="form-select" id="recommendation" required>
+                            <option value="">Select Recommendation</option>
+                            <option value="approve">Approve</option>
+                            <option value="approve_with_minor">Approve with Minor Revisions</option>
+                            <option value="revise">Revise and Resubmit</option>
+                            <option value="reject">Reject</option>
+                        </select>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary me-md-2">
+                            <i class="fas fa-check"></i> Submit Review
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('content-container').innerHTML = reviewHtml;
+    
+    // Setup form handlers
+    document.getElementById('reviewForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const comments = document.getElementById('overallComments').value;
+        const grade = document.getElementById('Grade').value;
+        const recommendation = document.getElementById('recommendation').value;
+        const user = JSON.parse(localStorage.getItem('grp_user'));
+        await fetch(`/api/documents/${docId}/review`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-user-id': user._id },
+            body: JSON.stringify({ comments, grade, recommendation, faculty: user._id })
+        });
+        showAlert('Review submitted successfully!', 'success');
+        loadDocumentReview();
+    });
+
+}
+
+// Load grading
+async function loadGrading() {
+    const response = await fetch('/api/documents/review');
+    const documents = await response.json();
+    let rows = '';
+    documents.forEach(doc => {
+        (doc.feedback || []).forEach(fb => {
+            rows += `
+                <tr>
+                    <td>${doc.student?.name || ''}</td>
+                    <td>${doc.title}</td>
+                    <td>${doc.type}</td>
+                    <td>${doc.submissionDate ? new Date(doc.submissionDate).toLocaleDateString() : ''}</td>
+                    <td><span class="badge bg-success">${fb.grade || ''}</span></td>
+                    <td>${fb.faculty?.name || ''}</td>
+                </tr>
+            `;
+        });
+    });
+    const gradingHtml = `
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Grading</h1>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Grades (from Document Reviews)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Document</th>
+                                <th>Type</th>
+                                <th>Submission Date</th>
+                                <th>Grade</th>
+                                <th>Reviewer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    document.getElementById('content-container').innerHTML = gradingHtml;
+}
+
+// Load search
+async function loadSearch() {
+    const searchHtml = `
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Search</h1>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <form id="searchForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="searchQuery" class="form-label">Search Term</label>
+                            <input type="text" class="form-control" id="searchQuery" placeholder="Enter keywords...">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="searchType" class="form-label">Search Type</label>
+                            <select class="form-select" id="searchType">
+                                <option value="all">All</option>
+                                <option value="students">Students</option>
+                                <option value="documents">Documents</option>
+                                <option value="feedback">Feedback</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="searchDepartment" class="form-label">Department</label>
+                            <select class="form-select" id="searchDepartment">
+                                <option value="all">All Departments</option>
+                                <option value="cs">Computer Science</option>
+                                <option value="ds">Data Science</option>
+                                <option value="it">Information Technology</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5>Search Results</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    Enter search criteria and click "Search" to see results.
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('content-container').innerHTML = searchHtml;
+    
+    // Form submit handler
+    document.getElementById('searchForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const query = document.getElementById('searchQuery').value;
+        const type = document.getElementById('searchType').value;
+        if (query) {
+            const response = await fetch(`/api/search?q=${encodeURIComponent(query)}${type && type !== 'all' ? `&type=${type}` : ''}`);
+            const results = await response.json();
+            let resultsHtml = '<div class="list-group">';
+            if (results.students) {
+                results.students.forEach(s => {
+                    resultsHtml += `<a href="#" class="list-group-item list-group-item-action"><div class="d-flex w-100 justify-content-between"><h6 class="mb-1">${s.name}</h6><small>Student</small></div><p class="mb-1">${s.email}</p></a>`;
+                });
+            }
+            if (results.documents) {
+                results.documents.forEach(d => {
+                    resultsHtml += `<div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">${d.title}</h6>
+                                <small>Type: ${d.type} | Status: ${d.status}</small>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary me-2" onclick="window.open('/api/documents/${d._id}/download', '_blank')"><i class='fas fa-download'></i> Download</button>
+                                <button class="btn btn-sm btn-outline-info" onclick="window.open('/api/documents/${d._id}/view', '_blank')"><i class='fas fa-eye'></i> View</button>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+            }
+            if (results.feedback) {
+                results.feedback.forEach(f => {
+                    resultsHtml += `<a href="#" class="list-group-item list-group-item-action"><div class="d-flex w-100 justify-content-between"><h6 class="mb-1">${f.title}</h6><small>Feedback</small></div><p class="mb-1">${f.feedback.comments}</p><small>Grade: ${f.feedback.grade}</small></a>`;
+                });
+            }
+            resultsHtml += '</div>';
+            document.querySelector('.card-body').innerHTML = resultsHtml;
+        }
+    });
+}
