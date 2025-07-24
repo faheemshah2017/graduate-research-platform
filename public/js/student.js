@@ -612,6 +612,9 @@ function loadMeetings() {
         document.getElementById('studentsContacts').classList.remove('d-none');
         document.getElementById('facultyContacts').classList.add('d-none');
     });
+    
+    // Poll for meeting notifications
+    startMeetingPolling();
 }
 
 async function loadMeetingContacts() {
@@ -689,15 +692,122 @@ function updateSelectedParticipants() {
 function startGoogleMeet() {
     const checkboxes = document.querySelectorAll('.form-check-input:checked');
     const emails = Array.from(checkboxes).map(checkbox => checkbox.dataset.email);
-    
-    // Create Google Meet link with participants
-    const meetLink = `https://meet.google.com/new?${emails.map(email => `authuser=${email}`).join('&')}`;
-    
-    // Open in new tab
-    window.open(meetLink, '_blank');
+    const userIds = Array.from(checkboxes).map(checkbox => checkbox.dataset.id);
+    // Step 1: Open new meeting
+    window.open('https://meet.google.com/new', '_blank');
+    // Step 2: Prompt for actual meeting link (wait for user to switch tab)
+    setTimeout(() => {
+        let meetLink = '';
+        // Use a modal for better UX
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100vw';
+        modal.style.height = '100vh';
+        modal.style.background = 'rgba(0,0,0,0.5)';
+        modal.style.zIndex = '99999';
+        modal.innerHTML = `
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:30px;border-radius:8px;max-width:400px;width:90%;box-shadow:0 2px 16px rgba(0,0,0,0.2);">
+                <h5>Paste Google Meet Link</h5>
+                <input type="text" id="meetLinkInput" class="form-control mb-3" placeholder="https://meet.google.com/abc-defg-hij">
+                <button id="sendMeetLinkBtn" class="btn btn-primary">Send Link to Participants</button>
+                <button id="cancelMeetLinkBtn" class="btn btn-outline-secondary ms-2">Cancel</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        document.getElementById('meetLinkInput').focus();
+        document.getElementById('sendMeetLinkBtn').onclick = function() {
+            meetLink = document.getElementById('meetLinkInput').value.trim();
+            if (meetLink && meetLink.startsWith('https://meet.google.com/')) {
+                fetch('/api/meetings/notify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userIds, meetLink })
+                });
+                showAlert('Meeting link sent to selected participants!', 'success');
+                document.body.removeChild(modal);
+            } else {
+                alert('Please enter a valid Google Meet link.');
+            }
+        };
+        document.getElementById('cancelMeetLinkBtn').onclick = function() {
+            document.body.removeChild(modal);
+        };
+    }, 1200);
 }
 
-function startInstantMeeting() {
-    // Start a meeting immediately without selecting participants
-    window.open('https://meet.google.com/new', '_blank');
+// Mark meeting as attended
+async function markMeetingAttended(meetingId, btn) {
+    await fetch(`/api/meetings/for-user/${meetingId}/attend`, { method: 'POST' });
+    const notifyDiv = btn.closest('.alert');
+    if (notifyDiv) notifyDiv.remove();
+}
+
+// Show meeting notification
+function showMeetingNotification(meeting) {
+    if (!document.getElementById(`meeting-notify-${meeting._id}`)) {
+        let container = document.getElementById('meeting-notify-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'meeting-notify-container';
+            container.style.position = 'fixed';
+            container.style.top = '20px';
+            container.style.right = '20px';
+            container.style.zIndex = '9999';
+            container.style.maxWidth = '350px';
+            document.body.appendChild(container);
+        }
+        const notifyDiv = document.createElement('div');
+        notifyDiv.className = 'alert alert-warning shadow';
+        notifyDiv.id = `meeting-notify-${meeting._id}`;
+        notifyDiv.style.marginBottom = '10px';
+        notifyDiv.innerHTML = `
+            <strong>New Meeting!</strong> <br>
+            <a href="${meeting.meetLink}" target="_blank" class="btn btn-sm btn-success join-meeting-btn" data-id="${meeting._id}">Join Meeting</a>
+            <button class="btn btn-sm btn-outline-secondary ms-2 dismiss-meeting-btn" data-id="${meeting._id}">Dismiss</button>
+        `;
+        container.appendChild(notifyDiv);
+    }
+}
+
+function startMeetingPolling() {
+    const user = JSON.parse(localStorage.getItem('grp_user'));
+    if (!user || !user._id) { return; }
+    setInterval(async () => {
+        try {
+            const response = await fetch(`/api/meetings/for-user/${user._id}`);
+            const meetings = await response.json();
+            if (meetings && meetings.length > 0) {
+                meetings.forEach(meeting => {
+                    showMeetingNotification(meeting);
+                });
+                // Attach event listeners for join/dismiss
+                document.querySelectorAll('.join-meeting-btn').forEach(function(btn) {
+                    btn.onclick = async function(e) {
+                        const meetingId = this.getAttribute('data-id');
+                        await markMeetingAttended(meetingId);
+                        window.open(this.href, '_blank');
+                        const notifyDiv = document.getElementById(`meeting-notify-${meetingId}`);
+                        if (notifyDiv) { notifyDiv.remove(); }
+                        e.preventDefault();
+                    };
+                });
+                document.querySelectorAll('.dismiss-meeting-btn').forEach(function(btn) {
+                    btn.onclick = async function() {
+                        const meetingId = this.getAttribute('data-id');
+                        await markMeetingAttended(meetingId);
+                        const notifyDiv = document.getElementById(`meeting-notify-${meetingId}`);
+                        if (notifyDiv) { notifyDiv.remove(); }
+                    };
+                });
+            }
+        } catch (err) {
+            // Ignore polling errors
+        }
+    }, 10000);
+}
+
+async function markMeetingAttended(meetingId) {
+    await fetch(`/api/meetings/attend/${meetingId}`, { method: 'POST' });
 }

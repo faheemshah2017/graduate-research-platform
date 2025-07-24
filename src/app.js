@@ -9,6 +9,7 @@ const userRoutes = require('./routes/user');
 const chatRoutes = require('./routes/chat');
 const facultyRoutes = require('./routes/faculty');
 const studentRoutes = require('./routes/student');
+const meetingRoutes = require('./routes/meeting');
 const dbConfig = require('./config/db');
 const swaggerSetup = require('./swagger');
 const path = require('path');
@@ -36,6 +37,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/student', studentRoutes);
+app.use('/api/meetings', meetingRoutes);
 
 // Serve static files from the public folder (one level up from src)
 app.use(express.static(path.join(__dirname, '..', 'public')));

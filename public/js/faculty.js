@@ -341,3 +341,71 @@ async function loadSearch() {
         }
     });
 }
+
+// Meeting notifications
+function showMeetingNotification(meeting) {
+    if (!document.getElementById(`meeting-notify-${meeting._id}`)) {
+        let container = document.getElementById('meeting-notify-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'meeting-notify-container';
+            container.style.position = 'fixed';
+            container.style.top = '20px';
+            container.style.right = '20px';
+            container.style.zIndex = '9999';
+            container.style.maxWidth = '350px';
+            document.body.appendChild(container);
+        }
+        const notifyDiv = document.createElement('div');
+        notifyDiv.className = 'alert alert-warning shadow';
+        notifyDiv.id = `meeting-notify-${meeting._id}`;
+        notifyDiv.style.marginBottom = '10px';
+        notifyDiv.innerHTML = `
+            <strong>New Meeting!</strong> <br>
+            <a href="${meeting.meetLink}" target="_blank" class="btn btn-sm btn-success join-meeting-btn" data-id="${meeting._id}">Join Meeting</a>
+            <button class="btn btn-sm btn-outline-secondary ms-2 dismiss-meeting-btn" data-id="${meeting._id}">Dismiss</button>
+        `;
+        container.appendChild(notifyDiv);
+    }
+}
+
+function startMeetingPolling() {
+    const user = JSON.parse(localStorage.getItem('grp_user'));
+    if (!user || !user._id) { return; }
+    setInterval(async () => {
+        try {
+            const response = await fetch(`/api/meetings/for-user/${user._id}`);
+            const meetings = await response.json();
+            if (meetings && meetings.length > 0) {
+                meetings.forEach(meeting => {
+                    showMeetingNotification(meeting);
+                });
+                // Attach event listeners for join/dismiss
+                document.querySelectorAll('.join-meeting-btn').forEach(function(btn) {
+                    btn.onclick = async function(e) {
+                        const meetingId = this.getAttribute('data-id');
+                        await markMeetingAttended(meetingId);
+                        window.open(this.href, '_blank');
+                        const notifyDiv = document.getElementById(`meeting-notify-${meetingId}`);
+                        if (notifyDiv) { notifyDiv.remove(); }
+                        e.preventDefault();
+                    };
+                });
+                document.querySelectorAll('.dismiss-meeting-btn').forEach(function(btn) {
+                    btn.onclick = async function() {
+                        const meetingId = this.getAttribute('data-id');
+                        await markMeetingAttended(meetingId);
+                        const notifyDiv = document.getElementById(`meeting-notify-${meetingId}`);
+                        if (notifyDiv) { notifyDiv.remove(); }
+                    };
+                });
+            }
+        } catch (err) {
+            // Ignore polling errors
+        }
+    }, 10000);
+}
+
+async function markMeetingAttended(meetingId) {
+    await fetch(`/api/meetings/attend/${meetingId}`, { method: 'POST' });
+}
