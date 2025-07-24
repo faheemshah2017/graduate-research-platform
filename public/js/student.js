@@ -36,9 +36,6 @@ function loadDocumentSubmission() {
                                <label for="documentSupervisor" class="form-label">Select Supervisor</label>
                                <select class="form-select" id="documentSupervisor" required>
                                <option value="">Select a supervisor</option>
-                               <option value="">Hohn Doer</option>
-                               <option value="">Dr Smith</option>
-                               <option value="">Mam Salma</option>
                                </select>
                             </div>  
                             <div class="mb-3">
@@ -67,7 +64,21 @@ function loadDocumentSubmission() {
     `;
     
     document.getElementById('content-container').innerHTML = submissionHtml;
-    
+
+    // Dynamically populate supervisor dropdown with faculty members
+    fetch('/api/users?role=faculty')
+        .then(res => res.json())
+        .then(facultyList => {
+            const supervisorSelect = document.getElementById('documentSupervisor');
+            supervisorSelect.innerHTML = '<option value="">Select a supervisor</option>';
+            facultyList.forEach(faculty => {
+                supervisorSelect.innerHTML += `<option value="${faculty._id}">${faculty.name}</option>`;
+            });
+        })
+        .catch(() => {
+            // fallback: show error or keep default
+        });
+
     // Setup file upload area
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('documentFile');

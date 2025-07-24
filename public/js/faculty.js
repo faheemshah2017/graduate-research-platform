@@ -4,7 +4,10 @@
 async function loadDocumentReview() {
     const response = await fetch('/api/documents/review');
     const documents = await response.json();
-    let rows = documents.map(doc => `
+    const user = JSON.parse(localStorage.getItem('grp_user'));
+    // Only show documents where advisor is the current faculty
+    const filteredDocs = documents.filter(doc => doc.advisor?._id === user._id);
+    let rows = filteredDocs.map(doc => `
         <tr>
             <td>${doc.title}</td>
             <td>${doc.student?.name || ''}</td>

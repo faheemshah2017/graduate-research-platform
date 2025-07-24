@@ -59,9 +59,14 @@ exports.download = async (req, res) => {
   try {
     const doc = await Document.findById(req.params.id);
     if (!doc || !doc.fileUrl) return res.status(404).json({ error: 'File not found' });
-    // If fileUrl is a local path:
-    // res.download(doc.fileUrl);
-    // If fileUrl is a remote URL:
+    // If fileUrl is a local path, use res.download
+    if (doc.fileUrl.startsWith('/uploads/')) {
+      // Get absolute path to file
+      const path = require('path');
+      const filePath = path.join(__dirname, '../..', doc.fileUrl);
+      return res.download(filePath);
+    }
+    // If fileUrl is a remote URL, redirect
     res.redirect(doc.fileUrl);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -91,12 +96,14 @@ exports.createDocument = async (req, res) => {
     if (!title || !type || !studentId) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
-    // Capitalize type to match enum
-    type = type.charAt(0).toUpperCase() + type.slice(1);
-    // Only set advisor if provided and not empty, and treat as supervisor
-    if (advisor && advisor !== '') docData.advisor = advisor;
-    // Optionally, also save as supervisor if your schema supports it
-    // docData.supervisor = advisor;
+    // Map form type to enum value
+    const typeMap = {
+      proposal: 'Proposal',
+      progress: 'Progress Report',
+      thesis: 'Thesis'
+    };
+    type = typeMap[type.toLowerCase()] || type;
+    // Initialize docData first
     const docData = {
       title,
       type,
@@ -105,7 +112,10 @@ exports.createDocument = async (req, res) => {
       fileUrl: `/uploads/${req.file.filename}`,
       status: 'Pending Review'
     };
+    // Only set advisor if provided and not empty, and treat as supervisor
     if (advisor && advisor !== '') docData.advisor = advisor;
+    // Optionally, also save as supervisor if your schema supports it
+    // docData.supervisor = advisor;
     const doc = new Document(docData);
     await doc.save();
     res.status(201).json({ message: 'Document submitted', document: doc });
