@@ -1030,63 +1030,34 @@ function loadDocumentArchive() {
 }
 
 // Load documents into the table
-function loadArchiveDocuments() {
-    // Sample data - in real app this would come from an API
-    const documents = [
-        {
-            id: 'doc001',
-            title: 'Machine Learning Research Proposal',
-            author: 'John Doe',
-            type: 'Proposal',
-            department: 'Computer Science',
-            date: '15 Jan 2023',
-            filename: 'ml_research_proposal.pdf',
-            url: '/documents/archives/ml_research_proposal.pdf'
-        },
-        {
-            id: 'doc002',
-            title: 'Data Analysis Progress Report',
-            author: 'Jane Smith',
-            type: 'Progress Report',
-            department: 'Data Science',
-            date: '20 Feb 2023',
-            filename: 'data_analysis_report.docx',
-            url: '/documents/archives/data_analysis_report.docx'
-        },
-        {
-            id: 'doc003',
-            title: 'Thesis Final Draft',
-            author: 'Alex Johnson',
-            type: 'Thesis',
-            department: 'Engineering',
-            date: '10 Mar 2023',
-            filename: 'thesis_final.pdf',
-            url: '/documents/archives/thesis_final.pdf'
-        }
-    ];
-
-    const tableBody = document.getElementById('archiveTableBody');
-    tableBody.innerHTML = '';
-
-    documents.forEach(doc => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${doc.title}</td>
-            <td>${doc.author}</td>
-            <td>${doc.type}</td>
-            <td>${doc.department}</td>
-            <td>${doc.date}</td>
-            <td>
-                <button class="btn btn-sm btn-outline-primary" onclick="downloadDocument('${doc.id}', '${doc.filename}')">
-                    <i class="fas fa-download"></i> Download
-                </button>
-                <button class="btn btn-sm btn-outline-info" onclick="viewDocument('${doc.id}')">
-                    <i class="fas fa-eye"></i> View
-                </button>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
+async function loadArchiveDocuments() {
+    try {
+        const res = await fetch('/api/documents/archive');
+        const documents = await res.json();
+        const tableBody = document.getElementById('archiveTableBody');
+        tableBody.innerHTML = '';
+        documents.forEach(doc => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${doc.title}</td>
+                <td>${doc.authorName || doc.author || '-'}</td>
+                <td>${doc.type || doc.documentType || '-'}</td>
+                <td>${doc.department || '-'}</td>
+                <td>${doc.approvedDate ? new Date(doc.approvedDate).toLocaleDateString() : '-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="downloadDocument('${doc._id}', '${doc.filename || doc.file || ''}')">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                    <button class="btn btn-sm btn-outline-info" onclick="viewDocument('${doc._id}')">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    } catch {
+        showAlert('Failed to load archived documents', 'danger');
+    }
 }
 
 // Download document function

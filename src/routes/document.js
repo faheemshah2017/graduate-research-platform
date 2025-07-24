@@ -20,21 +20,6 @@ const upload = multer({ storage: storage });
 // List documents for review
 router.get('/review', /*auth,*/ documentController.listForReview);
 
-// Get document details
-router.get('/:id', /*auth,*/ documentController.getDocument);
-
-// Submit review/feedback/grade
-router.post('/:id/review', /*auth,*/ documentController.submitReview);
-
-// Download document file
-router.get('/:id/download', /*auth,*/ documentController.download);
-
-// View document online
-router.get('/:id/view', /*auth,*/ documentController.view);
-
-// Submit new document (student upload)
-router.post('/', /*auth,*/ upload.single('file'), documentController.createDocument);
-
 // API: GET /api/documents/archive
 // Returns all approved documents (archive)
 const Document = require('../models/document');
@@ -45,15 +30,15 @@ router.get('/archive', async (req, res) => {
   try {
     const docs = await Document.find({ status: 'Approved' })
       .populate('student', 'name email department')
-      .sort({ submissionDate: -1 });
+      .sort({ approvedDate: -1 });
     // Format for frontend
     const archive = docs.map(doc => ({
-      id: doc._id,
+      _id: doc._id,
       title: doc.title,
-      author: doc.student ? doc.student.name : '',
+      authorName: doc.student ? doc.student.name : '',
       type: doc.type,
       department: doc.student ? doc.student.department : '',
-      date: doc.submissionDate ? doc.submissionDate.toISOString().split('T')[0] : '',
+      approvedDate: doc.approvedDate || doc.submissionDate,
       filename: doc.fileUrl,
       url: doc.fileUrl
     }));
@@ -62,5 +47,38 @@ router.get('/archive', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Get document details
+router.get('/:id', /*auth,*/ documentController.getDocument);
+
+// Submit review/feedback/grade
+router.post('/:id/review', /*auth,*/ documentController.submitReview);
+
+// Download document file
+router.get('/:id/download', async (req, res) => {
+  try {
+    const doc = await Document.findById(req.params.id);
+    if (!doc || !doc.fileUrl) return res.status(404).send('File not found');
+    const filePath = path.join(__dirname, '../../uploads', doc.fileUrl);
+    res.download(filePath, doc.title + (path.extname(doc.fileUrl) || '.pdf'));
+  } catch (err) {
+    res.status(500).send('Download error');
+  }
+});
+
+// View document online
+router.get('/:id/view', async (req, res) => {
+  try {
+    const doc = await Document.findById(req.params.id);
+    if (!doc || !doc.fileUrl) return res.status(404).send('File not found');
+    const filePath = path.join(__dirname, '../../uploads', doc.fileUrl);
+    res.sendFile(filePath);
+  } catch (err) {
+    res.status(500).send('View error');
+  }
+});
+
+// Submit new document (student upload)
+router.post('/', /*auth,*/ upload.single('file'), documentController.createDocument);
 
 module.exports = router;
