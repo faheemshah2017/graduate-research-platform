@@ -186,36 +186,39 @@ function initializeDashboard() {
     
     // Admin dashboard
     if (currentUser.role === ROLES.ADMIN) {
-        dashboardHtml += `
-            <div class="col-md-3">
-                <div class="dashboard-tile tile-primary">
-                    <h3><i class="fas fa-users"></i> 42</h3>
-                    <p>Total Users</p>
+        // Fetch dynamic dashboard stats
+        fetch('/api/users/admin/dashboard-stats')
+            .then(res => res.json())
+            .then(stats => {
+                dashboardHtml += `
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-primary">
+                            <h3><i class="fas fa-users"></i> ${stats.totalUsers}</h3>
+                            <p>Total Users</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-success">
+                            <h3><i class="fas fa-file-alt"></i> ${stats.documentsSubmitted}</h3>
+                            <p>Documents Submitted</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-warning">
+                            <h3><i class="fas fa-clock"></i> ${stats.pendingReviews}</h3>
+                            <p>Pending Reviews</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-info">
+                            <h3><i class="fas fa-bell"></i> ${stats.newNotifications}</h3>
+                            <p>New Notifications</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="dashboard-tile tile-success">
-                    <h3><i class="fas fa-file-alt"></i> 128</h3>
-                    <p>Documents Submitted</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="dashboard-tile tile-warning">
-                    <h3><i class="fas fa-clock"></i> 15</h3>
-                    <p>Pending Reviews</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="dashboard-tile tile-info">
-                    <h3><i class="fas fa-bell"></i> 7</h3>
-                    <p>New Notifications</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-md-60">
-                <div class="card">
+                <div class="row">
+                    <div class="col-md-60">
+                        <div class="card">
             <div class="col-md-70">
                 <div class="card">
                     <div class="card-header">
@@ -238,6 +241,63 @@ function initializeDashboard() {
             </div>
         </div>
         `;
+                document.getElementById('content-container').innerHTML = dashboardHtml;
+            })
+            .catch(() => {
+                dashboardHtml += `
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-primary">
+                            <h3><i class="fas fa-users"></i> 0</h3>
+                            <p>Total Users</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-success">
+                            <h3><i class="fas fa-file-alt"></i> 0</h3>
+                            <p>Documents Submitted</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-warning">
+                            <h3><i class="fas fa-clock"></i> 0</h3>
+                            <p>Pending Reviews</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-info">
+                            <h3><i class="fas fa-bell"></i> 0</h3>
+                            <p>New Notifications</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-60">
+                        <div class="card">
+            <div class="col-md-70">
+                <div class="card">
+                    <div class="card-header">
+                        Quick Actions
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" onclick="loadUserManagement()">
+                                <i class="fas fa-user-plus me-2"></i> Add New User
+                            </button>
+                            <button class="btn btn-success" onclick="loadDocumentArchive()">
+                                <i class="fas fa-archive me-2"></i> Archive Documents
+                            </button>
+                            <button class="btn btn-info" onclick="loadReports()">
+                                <i class="fas fa-chart-pie me-2"></i> Generate Reports
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+                document.getElementById('content-container').innerHTML = dashboardHtml;
+            });
+        return;
     }
     
     // Student dashboard

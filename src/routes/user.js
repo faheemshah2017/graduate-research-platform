@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/user');
 const Document = require('../models/document');
+const Notification = require('../models/notification');
 const multer = require('multer');
 const path = require('path');
 const upload = multer({
@@ -79,6 +80,19 @@ router.delete('/:id', async (req, res) => {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin dashboard stats endpoint
+router.get('/admin/dashboard-stats', async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const documentsSubmitted = await Document.countDocuments();
+    const pendingReviews = await Document.countDocuments({ status: 'Pending Review' });
+    const newNotifications = await Notification.countDocuments({ read: false });
+    res.json({ totalUsers, documentsSubmitted, pendingReviews, newNotifications });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
