@@ -472,7 +472,6 @@ function loadProfile() {
 
 // Load user management page (Admin only)
 async function loadUserManagement() {
-    debugger
     if (!currentUser || currentUser.role !== ROLES.ADMIN) return;
     // Fetch users from backend
     let users = [];
@@ -533,7 +532,7 @@ async function loadUserManagement() {
                                         <button class="btn btn-sm btn-outline-primary" onclick="editUser('${user._id}')">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-outline-danger" onclick="confirmDeleteUser('${user._id}')">
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${user._id}')">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </td>
@@ -790,30 +789,38 @@ function searchUsers() {
     });
 }
 
-function confirmDeleteUser(userId) {
-    if (confirm('Are you sure you want to delete this user account?')) {
-        deleteUser(userId);
-    }
-}
-
-function deleteUser(userId) {
-    users = users.filter(user => user.id !== userId);
-    showAlert('User account deleted', 'success');
-    loadUserManagement();
-}
-
-function editUser(userId) {
-    // Implementation for edit functionality
-    const user = users.find(u => u.id === userId);
-    if (user) {
-        showAlert(`Edit functionality would open for ${user.name}`, 'info');
+// Delete user (API integration)
+async function deleteUser(userId) {
+    if (!userId) return;
+    if (!confirm('Are you sure you want to delete this user?')) return;
+    try {
+        const res = await fetch(`/api/users/${userId}`, {
+            method: 'DELETE'
+        });
+        if (res.ok) {
+            showAlert('User deleted successfully!', 'success');
+            loadUserManagement();
+        } else {
+            const err = await res.json();
+            showAlert(err.error || 'Failed to delete user', 'danger');
+        }
+    } catch (err) {
+        showAlert('Failed to delete user', 'danger');
     }
 }
 //edit user
-function editUser(userId) {
-    const user = users.find(u => u.id === userId);
+async function editUser(userId) {
+    let users = [];
+    try {
+        const res = await fetch('/api/users');
+        users = await res.json();
+    } catch {
+        showAlert('Failed to load users from server', 'danger');
+        users = [];
+    }
+    // Use _id for MongoDB users
+    const user = users.find(u => u._id === userId);
     if (!user) return;
-
     const editUserModalHtml = `
         <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -844,30 +851,26 @@ function editUser(userId) {
                                 <label for="editUserDepartment" class="form-label">Department</label>
                                 <input type="text" class="form-control" id="editUserDepartment" value="${user.department || ''}" required>
                             </div>
-                            <div class="mb-3">
-                                <label for="editUserPassword" class="form-label">New Password (leave blank to keep current)</label>
-                                <input type="password" class="form-control" id="editUserPassword">
-                            </div>
                         </form>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary" onclick="submitEditUserForm(${user.id})">Save Changes</button>
+                        <button type="button" class="btn btn-primary" onclick="submitEditUserForm('${user._id}')">Save Changes</button>
                     </div>
                 </div>
             </div>
         </div>
     `;
-
+    // Remove any existing modal first
+    const oldModal = document.getElementById('editUserModal');
+    if (oldModal) oldModal.remove();
     // Create modal element
     const modalDiv = document.createElement('div');
     modalDiv.innerHTML = editUserModalHtml;
     document.body.appendChild(modalDiv);
-
     // Show modal
     const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
     modal.show();
-
     // Remove modal from DOM after it's hidden
     document.getElementById('editUserModal').addEventListener('hidden.bs.modal', function() {
         modalDiv.remove();
@@ -876,15 +879,12 @@ function editUser(userId) {
 
 // Submit edit user form (API integration)
 async function submitEditUserForm(userId) {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
 
     const name = document.getElementById('editUserName').value;
     const email = document.getElementById('editUserEmail').value;
     const role = document.getElementById('editUserRole').value;
     const department = document.getElementById('editUserDepartment').value;
-    const newPassword = document.getElementById('editUserPassword').value;
-
+    
     // Basic validation
     if (!name || !email || !role || !department) {
         showAlert('Please fill all required fields', 'danger');
@@ -893,7 +893,6 @@ async function submitEditUserForm(userId) {
 
     // Prepare payload
     const payload = { name, email, role, department };
-    if (newPassword) payload.password = newPassword;
 
     try {
         const res = await fetch(`/api/users/${userId}`, {
@@ -911,16 +910,6 @@ async function submitEditUserForm(userId) {
         }
     } catch (err) {
         showAlert('Failed to update user', 'danger');
-    }
-}
-
-// Delete user
-function deleteUser(userId) {
-    if (confirm('Are you sure you want to delete this user?')) {
-        // In a real app, you would make an API call to delete the user
-        users = users.filter(u => u.id !== userId);
-        showAlert('User deleted successfully!', 'success');
-        loadUserManagement();
     }
 }
 
