@@ -170,7 +170,9 @@ async function loadProgressTracking() {
     const user = JSON.parse(localStorage.getItem('grp_user'));
     const response = await fetch(`/api/documents/review?student=${user._id}`);
     const documents = await response.json();
-    let rows = documents.map(doc => `
+    // Only show documents with current student id
+    const filteredDocs = documents.filter(doc => doc.student?._id === user._id || doc.student === user._id);
+    let rows = filteredDocs.map(doc => `
         <tr>
             <td>${doc.title}</td>
             <td>${doc.type}</td>
@@ -216,19 +218,23 @@ async function loadProgressTracking() {
 // Load feedback
 async function loadFeedback(docId) {
     let doc;
+    const user = JSON.parse(localStorage.getItem('grp_user'));
     if (docId) {
         // Fetch specific document by ID
         const response = await fetch(`/api/documents/${docId}`);
         doc = await response.json();
+        // Filter feedback for current student only
+        if (doc.feedback && Array.isArray(doc.feedback)) {
+            doc.feedback = doc.feedback.filter(fb => doc.student?._id === user._id || doc.student === user._id);
+        }
     } else {
         // Fetch all documents for the current student
-        const user = JSON.parse(localStorage.getItem('grp_user'));
         const response = await fetch(`/api/documents/review?student=${user._id}`);
         const documents = await response.json();
-        // Flatten all feedbacks from all documents
+        // Flatten all feedbacks from all documents, only for current student
         doc = { feedback: [] };
         documents.forEach(d => {
-            if (d.feedback && d.feedback.length > 0) {
+            if ((d.student?._id === user._id || d.student === user._id) && d.feedback && d.feedback.length > 0) {
                 d.feedback.forEach(fb => {
                     doc.feedback.push({ ...fb, title: d.title, advisor: d.advisor });
                 });

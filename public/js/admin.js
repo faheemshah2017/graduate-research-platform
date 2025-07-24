@@ -62,7 +62,7 @@ function loadSidebar() {
         sidebarHtml += `
             <li class="nav-item">
                 <a class="nav-link" href="#" onclick="setActiveSidebar(this);loadUserManagement()">
-                    <i class="fas fa-users-cog"></i> User Management
+                    <i class="fas fa-users"></i> User Management
                 </a>
             </li>
             <li class="nav-item">
@@ -472,6 +472,7 @@ function loadProfile() {
 
 // Load user management page (Admin only)
 async function loadUserManagement() {
+    debugger
     if (!currentUser || currentUser.role !== ROLES.ADMIN) return;
     // Fetch users from backend
     let users = [];
@@ -521,7 +522,7 @@ async function loadUserManagement() {
                             </tr>
                         </thead>
                         <tbody>
-                            ${users.map(user => `
+                            ${users.filter(user => user.role !== 'admin').map(user =>  `
                                 <tr>
                                     <td>${user.name}</td>
                                     <td>${user.email}</td>
@@ -707,9 +708,8 @@ function toggleRoleFields() {
     // Note: No action needed for 'admin' role as both fields should remain hidden
 }
 // Handle form submission
-function submitUserForm(event) {
+async function submitUserForm(event) {
     event.preventDefault();
-    
     // Get form values
     const userData = {
         name: document.getElementById('userName').value.trim(),
@@ -720,25 +720,16 @@ function submitUserForm(event) {
         active: document.getElementById('userActive').checked,
         sendEmail: document.getElementById('sendWelcomeEmail').checked
     };
-    
     // Validate passwords match
     if (userData.password !== document.getElementById('confirmPassword').value) {
         showAlert('Passwords do not match', 'danger');
         return;
     }
-    
     // Validate email format
     if (!validateEmail(userData.email)) {
         showAlert('Please enter a valid email address', 'danger');
         return;
     }
-    
-    // Check if email already exists
-    if (users.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
-        showAlert('A user with this email already exists', 'danger');
-        return;
-    }
-    
     // Add role-specific data
     if (userData.role === 'student') {
         userData.studentId = document.getElementById('studentId').value;
@@ -747,28 +738,23 @@ function submitUserForm(event) {
         userData.position = document.getElementById('facultyPosition').value;
         userData.office = document.getElementById('facultyOffice').value;
     }
-    
-    // Create user object (in real app, this would be an API call)
-    const newUser = {
-        id: generateUserId(),
-        ...userData,
-        createdAt: new Date().toISOString(),
-        lastLogin: null
-    };
-    
-    // Add to users array
-    users.push(newUser);
-    
-    // Show success message
-    showAlert(`Successfully created ${userData.role} account for ${userData.name}`, 'success');
-    
-    // If send email was checked, simulate sending
-    if (userData.sendEmail) {
-        console.log(`Sending welcome email to ${userData.email}`);
+    // Send to backend API
+    try {
+        const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData)
+        });
+        if (res.ok) {
+            showAlert(`Successfully created ${userData.role} account for ${userData.name}`, 'success');
+            setTimeout(() => loadUserManagement(), 1500);
+        } else {
+            const err = await res.json();
+            showAlert(err.message || 'User creation failed', 'danger');
+        }
+    } catch {
+        showAlert('User creation failed', 'danger');
     }
-    
-    // Return to user management after delay
-    setTimeout(() => loadUserManagement(), 1500);
 }
 
 // Helper functions
@@ -888,8 +874,8 @@ function editUser(userId) {
     });
 }
 
-// Submit edit user form
-function submitEditUserForm(userId) {
+// Submit edit user form (API integration)
+async function submitEditUserForm(userId) {
     const user = users.find(u => u.id === userId);
     if (!user) return;
 
@@ -905,21 +891,27 @@ function submitEditUserForm(userId) {
         return;
     }
 
-    // Update user data
-    user.name = name;
-    user.email = email;
-    user.role = role;
-    user.department = department;
+    // Prepare payload
+    const payload = { name, email, role, department };
+    if (newPassword) payload.password = newPassword;
 
-    // Update password if provided
-    if (newPassword) {
-        user.password = newPassword;
+    try {
+        const res = await fetch(`/api/users/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            showAlert('User updated successfully!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+            loadUserManagement();
+        } else {
+            const err = await res.json();
+            showAlert(err.error || 'Failed to update user', 'danger');
+        }
+    } catch (err) {
+        showAlert('Failed to update user', 'danger');
     }
-
-    // Close modal and refresh
-    bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
-    showAlert('User updated successfully!', 'success');
-    loadUserManagement();
 }
 
 // Delete user
@@ -1111,38 +1103,16 @@ function trackDocumentAction(action, docId) {
 }
 
 // Load reports with full export functionality
-function loadReports() {
-    // Sample data - in a real app, this would come from your database
-    const reportData = [
-        {
-            name: "John Doe",
-            regNumber: "CS2023001",
-            projectTitle: "Machine Learning for Image Recognition",
-            supervisor: "Dr. Smith",
-            department: "Computer Science",
-            status: "In Progress",
-            lastSubmission: "2023-05-15"
-        },
-        {
-            name: "Jane Smith",
-            regNumber: "DS2023002",
-            projectTitle: "Big Data Analysis in Healthcare",
-            supervisor: "Dr. Johnson",
-            department: "Data Science",
-            status: "Completed",
-            lastSubmission: "2023-04-20"
-        },
-        {
-            name: "Mike Johnson",
-            regNumber: "IT2023003",
-            projectTitle: "Blockchain for Secure Voting Systems",
-            supervisor: "Dr. Williams",
-            department: "Information Technology",
-            status: "In Progress",
-            lastSubmission: "2023-05-10"
-        }
-    ];
-
+async function loadReports() {
+    // Fetch report data from backend
+    let reportData = [];
+    try {
+        const res = await fetch('/api/users/reports');
+        reportData = await res.json();
+    } catch {
+        showAlert('Failed to load reports from server', 'danger');
+        reportData = [];
+    }
     const reportsHtml = `
         <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
             <h1 class="h2">Student Research Reports</h1>
@@ -1162,7 +1132,6 @@ function loadReports() {
                 </button>
             </div>
         </div>
-        
         <div class="row mb-3">
             <div class="col-md-12">
                 <div class="card">
@@ -1189,8 +1158,8 @@ function loadReports() {
                                     <select class="form-select" id="departmentFilter">
                                         <option value="all">All Departments</option>
                                         <option value="Computer Science">Computer Science</option>
-                                        <option value="Data Science">Data Science</option>
-                                        <option value="Information Technology">Information Technology</option>
+                                        <option value="Software Engineering">Software Engineering</option>
+                                        <option value="Mathematics">Mathematics</option>
                                     </select>
                                 </div>
                                 <div class="col-md-3">
@@ -1205,9 +1174,7 @@ function loadReports() {
                                     <label for="supervisorFilter" class="form-label">Supervisor</label>
                                     <select class="form-select" id="supervisorFilter">
                                         <option value="all">All Supervisors</option>
-                                        <option value="Dr. Smith">Dr. Smith</option>
-                                        <option value="Dr. Johnson">Dr. Johnson</option>
-                                        <option value="Dr. Williams">Dr. Williams</option>
+                                        ${[...new Set(reportData.map(r => r.supervisor))].map(s => `<option value="${s}">${s}</option>`).join('')}
                                     </select>
                                 </div>
                                 <div class="col-md-3 d-flex align-items-end">
@@ -1221,7 +1188,6 @@ function loadReports() {
                 </div>
             </div>
         </div>
-        
         <div class="card">
             <div class="card-header">
                 <h5>Student Research Projects</h5>
@@ -1623,79 +1589,6 @@ document.addEventListener('DOMContentLoaded', function() {
     checkAuthState();
 });
 
-
-// Load User Management Dashboard
-function loadUserManagement() {
-    const html = `
-        <div class="container-fluid" style="margin-top: 60px;">
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-
-            <h1 class="h2">User Management</h1>
-            <div class="btn-toolbar mb-2 mb-md-0">
-                <button class="btn btn-primary" onclick="loadAddUserForm()">
-                    <i class="fas fa-user-plus me-1"></i> Add New User
-                </button>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h5>All Users</h5>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="input-group">
-                            <input type="text" class="form-control" placeholder="Search users..." id="userSearch">
-                            <button class="btn btn-outline-secondary" type="button" onclick="searchUsers()">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Department</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="usersTableBody">
-                            ${users.map(user => `
-                                <tr>
-                                    <td>${user.id}</td>
-                                    <td>${user.name}</td>
-                                    <td>${user.email}</td>
-                                    <td><span class="badge ${getRoleBadgeClass(user.role)}">${capitalizeFirstLetter(user.role)}</span></td>
-                                    <td>${user.department}</td>
-                                    <td><span class="badge ${user.active ? 'bg-success' : 'bg-secondary'}">${user.active ? 'Active' : 'Inactive'}</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser(${user.id})">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" onclick="confirmDeleteUser(${user.id})">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    `;
-
-    document.getElementById('content-container').innerHTML = html;
-}
 
 // Load Add New User Form (Registration Form)
 function loadAddUserForm() {

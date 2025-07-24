@@ -35,4 +35,32 @@ router.get('/:id/view', /*auth,*/ documentController.view);
 // Submit new document (student upload)
 router.post('/', /*auth,*/ upload.single('file'), documentController.createDocument);
 
+// API: GET /api/documents/archive
+// Returns all approved documents (archive)
+const Document = require('../models/document');
+const User = require('../models/user');
+
+// Get all approved documents (archive)
+router.get('/archive', async (req, res) => {
+  try {
+    const docs = await Document.find({ status: 'Approved' })
+      .populate('student', 'name email department')
+      .sort({ submissionDate: -1 });
+    // Format for frontend
+    const archive = docs.map(doc => ({
+      id: doc._id,
+      title: doc.title,
+      author: doc.student ? doc.student.name : '',
+      type: doc.type,
+      department: doc.student ? doc.student.department : '',
+      date: doc.submissionDate ? doc.submissionDate.toISOString().split('T')[0] : '',
+      filename: doc.fileUrl,
+      url: doc.fileUrl
+    }));
+    res.json(archive);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
