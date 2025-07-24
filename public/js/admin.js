@@ -242,110 +242,118 @@ function initializeDashboard() {
     
     // Student dashboard
     if (currentUser.role === ROLES.STUDENT) {
-        dashboardHtml += `
-            <div class="col-md-3">
-                <div class="dashboard-tile tile-primary">
-                    <h3><i class="fas fa-file-upload"></i> 3</h3>
-                    <p>Documents Submitted</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="dashboard-tile tile-success">
-                    <h3><i class="fas fa-check-circle"></i> 2</h3>
-                    <p>Approved Documents</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="dashboard-tile tile-warning">
-                    <h3><i class="fas fa-clock"></i> 1</h3>
-                    <p>Pending Reviews</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="dashboard-tile tile-info">
-                    <h3><i class="fas fa-comment-alt"></i> 2</h3>
-                    <p>Feedback Received</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row">                
-            <div class="col-md-60">
-                <div class="card">
-                    <div class="card-header">
-                        Quick Actions
+        // Fetch student analytics from backend and render dashboard tiles
+        fetch(`/api/student/analytics?studentId=${currentUser._id}`)
+            .then(res => res.json())
+            .then(analytics => {
+                dashboardHtml += `
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-primary">
+                            <h3><i class="fas fa-file-upload"></i> ${analytics.documentsSubmitted}</h3>
+                            <p>Documents Submitted</p>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-primary" onclick="loadFeedback()">
-                                <i class="fas fa-file-signature me-2"></i>Check Feedback
-                            </button>
-                            <button class="btn btn-success" onclick="loadGrades()">
-                                <i class="fas fa-check-double me-2"></i> Check Grades
-                            </button>
-                            <button class="btn btn-info" onclick="loadMeetings()">
-                                <i class="fas fa-search me-2"></i>Start online Meeting
-                            </button>
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-success">
+                            <h3><i class="fas fa-check-circle"></i> ${analytics.approvedDocuments}</h3>
+                            <p>Approved Documents</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-warning">
+                            <h3><i class="fas fa-clock"></i> ${analytics.pendingReviews}</h3>
+                            <p>Pending Reviews</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-info">
+                            <h3><i class="fas fa-comment-alt"></i> ${analytics.feedbackReceived}</h3>
+                            <p>Feedback Received</p>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        `;
+                <div class="row">                
+                    <div class="col-md-60">
+                        <div class="card">
+                            <div class="card-header">Quick Actions</div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-primary" onclick="loadFeedback()">
+                                        <i class="fas fa-file-signature me-2"></i>Check Feedback
+                                    </button>
+                                    <button class="btn btn-success" onclick="loadGrades()">
+                                        <i class="fas fa-check-double me-2"></i> Check Grades
+                                    </button>
+                                    <button class="btn btn-info" onclick="loadMeetings()">
+                                        <i class="fas fa-search me-2"></i>Start online Meeting
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+                document.getElementById('content-container').innerHTML = dashboardHtml;
+            });
+        return;
     }
     
     // Faculty dashboard
     if (currentUser.role === ROLES.FACULTY) {
-        dashboardHtml += `
-            <div class="col-md-3">
-                <div class="dashboard-tile tile-primary">
-                    <h3><i class="fas fa-file-alt"></i> 12</h3>
-                    <p>Documents to Review</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="dashboard-tile tile-success">
-                    <h3><i class="fas fa-check-circle"></i> 24</h3>
-                    <p>Reviews Completed</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="dashboard-tile tile-warning">
-                    <h3><i class="fas fa-clock"></i> 5</h3>
-                    <p>Pending Meetings</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="dashboard-tile tile-info">
-                    <h3><i class="fas fa-comments"></i> 3</h3>
-                    <p>Unread Messages</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row">                
-            <div class="col-md-60">
-                <div class="card">
-                    <div class="card-header">
-                        Quick Actions
+        // Pass current user id to fetch analytics
+        fetch(`/api/faculty/analytics?facultyId=${currentUser._id}`)
+            .then(res => res.json())
+            .then(analytics => {
+                dashboardHtml += `
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-primary">
+                            <h3><i class="fas fa-file-alt"></i> ${analytics.documentsToReview}</h3>
+                            <p>Documents to Review</p>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-primary" onclick="loadDocumentReview()">
-                                <i class="fas fa-file-signature me-2"></i> Review Documents
-                            </button>
-                            <button class="btn btn-success" onclick="loadGrading()">
-                                <i class="fas fa-check-double me-2"></i> Assign Grades
-                            </button>
-                            <button class="btn btn-info" onclick="loadSearch()">
-                                <i class="fas fa-search me-2"></i> Search Documents
-                            </button>
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-success">
+                            <h3><i class="fas fa-check-circle"></i> ${analytics.reviewsCompleted}</h3>
+                            <p>Reviews Completed</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-warning">
+                            <h3><i class="fas fa-clock"></i> ${analytics.pendingMeetings}</h3>
+                            <p>Pending Meetings</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-tile tile-info">
+                            <h3><i class="fas fa-comments"></i> ${analytics.unreadMessages}</h3>
+                            <p>Unread Messages</p>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        `;
+                <div class="row">                
+                    <div class="col-md-60">
+                        <div class="card">
+                            <div class="card-header">Quick Actions</div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-primary" onclick="loadDocumentReview()">
+                                        <i class="fas fa-file-signature me-2"></i> Review Documents
+                                    </button>
+                                    <button class="btn btn-success" onclick="loadGrading()">
+                                        <i class="fas fa-check-double me-2"></i> Assign Grades
+                                    </button>
+                                    <button class="btn btn-info" onclick="loadSearch()">
+                                        <i class="fas fa-search me-2"></i> Search Documents
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+                document.getElementById('content-container').innerHTML = dashboardHtml;
+            });
+        return;
     }
     
     document.getElementById('content-container').innerHTML = dashboardHtml;

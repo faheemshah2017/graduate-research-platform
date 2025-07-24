@@ -4,22 +4,26 @@ const User = require('../models/user');
 // Search students, documents, feedback
 exports.search = async (req, res) => {
   try {
-    const { q, type } = req.query;
+    const { q, type, department } = req.query;
     let results = {};
     if (!q) return res.status(400).json({ error: 'Missing search query' });
     if (!type || type === 'students') {
-      results.students = await User.find({
+      const studentFilter = {
         $or: [
           { name: { $regex: q, $options: 'i' } },
           { email: { $regex: q, $options: 'i' } }
         ],
         role: 'student'
-      }).select('name email');
+      };
+      if (department && department !== 'all') {
+        studentFilter.department = department;
+      }
+      results.students = await User.find(studentFilter).select('name email department');
     }
     if (!type || type === 'documents') {
       results.documents = await Document.find({
         title: { $regex: q, $options: 'i' }
-      }).select('title type status');
+      }).select('title type status department student');
     }
     if (!type || type === 'feedback') {
       results.feedback = await Document.aggregate([

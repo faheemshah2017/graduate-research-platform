@@ -204,13 +204,30 @@ async function loadProgressTracking() {
 
 // Load feedback
 async function loadFeedback(docId) {
-    const response = await fetch(`/api/documents/${docId}`);
-    const doc = await response.json();
+    let doc;
+    if (docId) {
+        // Fetch specific document by ID
+        const response = await fetch(`/api/documents/${docId}`);
+        doc = await response.json();
+    } else {
+        // Fetch all documents for the current student
+        const user = JSON.parse(localStorage.getItem('grp_user'));
+        const response = await fetch(`/api/documents/review?student=${user._id}`);
+        const documents = await response.json();
+        // Flatten all feedbacks from all documents
+        doc = { feedback: [] };
+        documents.forEach(d => {
+            if (d.feedback && d.feedback.length > 0) {
+                d.feedback.forEach(fb => {
+                    doc.feedback.push({ ...fb, title: d.title, advisor: d.advisor });
+                });
+            }
+        });
+    }
     let feedbackHtml = `
         <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
             <h1 class="h2">Feedback</h1>
         </div>
-        
         <div class="card">
             <div class="card-header">
                 <div class="row">
@@ -225,12 +242,12 @@ async function loadFeedback(docId) {
             feedbackHtml += `
                 <div class="list-group-item">
                     <div class="d-flex w-100 justify-content-between">
-                        <h6>${doc.title} Feedback</h6>
+                        <h6>${fb.title || doc.title} Feedback</h6>
                         <small>${new Date(fb.date).toLocaleDateString()}</small>
                     </div>
                     <div class="feedback-comment mt-2">
                         <p>${fb.comments}</p>
-                        <small class="text-muted">From: ${fb.faculty?.name || ''}</small>
+                        <small class="text-muted">From: ${doc.advisor?.name || fb.advisor?.name|| ''}</small>
                     </div>
                     <div class="mt-2">
                         <button class="btn btn-primary" onclick="loadChat()">
@@ -241,7 +258,7 @@ async function loadFeedback(docId) {
             `;
         });
     } else {
-        feedbackHtml += '<div class="list-group-item">No feedback yet.</div>';
+        feedbackHtml += '<div class="list-group-item">No feedback yet..</div>';
     }
     feedbackHtml += '</div></div></div>';
     document.getElementById('content-container').innerHTML = feedbackHtml;
@@ -263,7 +280,7 @@ async function loadGrades() {
                         <td>${doc.type}</td>
                         <td>${doc.submissionDate ? new Date(doc.submissionDate).toLocaleDateString() : ''}</td>
                         <td><span class="badge bg-success">${fb.grade || ''}</span></td>
-                        <td>${fb.faculty?.name || ''}</td>
+                        <td>${doc.advisor?.name || ''}</td>
                     </tr>
                 `;
             });
@@ -280,7 +297,7 @@ async function loadGrades() {
                         <td>${doc.type}</td>
                         <td>${doc.submissionDate ? new Date(doc.submissionDate).toLocaleDateString() : ''}</td>
                         <td><span class="badge bg-success">${fb.grade || ''}</span></td>
-                        <td>${fb.faculty?.name || ''}</td>
+                        <td>${doc.advisor?.name || ''}</td>
                     </tr>
                 `;
             });

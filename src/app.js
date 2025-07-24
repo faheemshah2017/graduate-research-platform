@@ -7,6 +7,8 @@ const gradeRoutes = require('./routes/grade');
 const searchRoutes = require('./routes/search');
 const userRoutes = require('./routes/user');
 const chatRoutes = require('./routes/chat');
+const facultyRoutes = require('./routes/faculty');
+const studentRoutes = require('./routes/student');
 const dbConfig = require('./config/db');
 const swaggerSetup = require('./swagger');
 const path = require('path');
@@ -32,6 +34,8 @@ app.use('/api/grades', gradeRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/faculty', facultyRoutes);
+app.use('/api/student', studentRoutes);
 
 // Serve static files from the public folder (one level up from src)
 app.use(express.static(path.join(__dirname, '..', 'public')));

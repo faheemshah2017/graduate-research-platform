@@ -178,7 +178,7 @@ async function loadGrading() {
                     <td>${doc.type}</td>
                     <td>${doc.submissionDate ? new Date(doc.submissionDate).toLocaleDateString() : ''}</td>
                     <td><span class="badge bg-success">${fb.grade || ''}</span></td>
-                    <td>${fb.faculty?.name || ''}</td>
+                    <td>${doc.advisor?.name || ''}</td>
                 </tr>
             `;
         });
@@ -247,9 +247,10 @@ async function loadSearch() {
                             <label for="searchDepartment" class="form-label">Department</label>
                             <select class="form-select" id="searchDepartment">
                                 <option value="all">All Departments</option>
-                                <option value="cs">Computer Science</option>
+                                <option value="Computer Science">Computer Science</option>
+                                <option value="Software Engineering">Software Engineering</option>
                                 <option value="ds">Data Science</option>
-                                <option value="it">Information Technology</option>
+                                <option value="Mathematics">Mathematics</option>
                             </select>
                         </div>
                     </div>
@@ -281,22 +282,21 @@ async function loadSearch() {
         e.preventDefault();
         const query = document.getElementById('searchQuery').value;
         const type = document.getElementById('searchType').value;
+        const department = document.getElementById('searchDepartment').value;
+        let apiUrl = `/api/search?q=${encodeURIComponent(query)}`;
+        if (type && type !== 'all') apiUrl += `&type=${type}`;
+        if (department && department !== 'all') apiUrl += `&department=${department}`;
         if (query) {
-            const response = await fetch(`/api/search?q=${encodeURIComponent(query)}${type && type !== 'all' ? `&type=${type}` : ''}`);
+            const response = await fetch(apiUrl);
             const results = await response.json();
             let resultsHtml = '<div class="list-group">';
-            if (results.students) {
-                results.students.forEach(s => {
-                    resultsHtml += `<a href="#" class="list-group-item list-group-item-action"><div class="d-flex w-100 justify-content-between"><h6 class="mb-1">${s.name}</h6><small>Student</small></div><p class="mb-1">${s.email}</p></a>`;
-                });
-            }
-            if (results.documents) {
+            if (results.documents && results.documents.length) {
                 results.documents.forEach(d => {
                     resultsHtml += `<div class="list-group-item">
                         <div class="d-flex w-100 justify-content-between align-items-center">
                             <div>
                                 <h6 class="mb-1">${d.title}</h6>
-                                <small>Type: ${d.type} | Status: ${d.status}</small>
+                                <small>Type: ${d.type} | Status: ${d.status}${d.department ? ' | Department: ' + d.department : ''}${d.student ? ' | Student: ' + (d.student.name || d.student) : ''}</small>
                             </div>
                             <div>
                                 <button class="btn btn-sm btn-outline-primary me-2" onclick="window.open('/api/documents/${d._id}/download', '_blank')"><i class='fas fa-download'></i> Download</button>
@@ -306,13 +306,35 @@ async function loadSearch() {
                     </div>`;
                 });
             }
-            if (results.feedback) {
-                results.feedback.forEach(f => {
-                    resultsHtml += `<a href="#" class="list-group-item list-group-item-action"><div class="d-flex w-100 justify-content-between"><h6 class="mb-1">${f.title}</h6><small>Feedback</small></div><p class="mb-1">${f.feedback.comments}</p><small>Grade: ${f.feedback.grade}</small></a>`;
+            if (results.students && results.students.length) {
+                results.students.forEach(s => {
+                    resultsHtml += `<div class='list-group-item'>
+                        <div class='d-flex w-100 justify-content-between'>
+                            <h6 class='mb-1'>${s.name}</h6>
+                            <small>Student</small>
+                        </div>
+                        <p class='mb-1'>${s.email}</p>
+                    </div>`;
                 });
             }
+            if (results.feedback && results.feedback.length) {
+                results.feedback.forEach(f => {
+                    resultsHtml += `<div class='list-group-item'>
+                        <div class='d-flex w-100 justify-content-between'>
+                            <h6 class='mb-1'>${f.title}</h6>
+                            <small>Feedback</small>
+                        </div>
+                        <p class='mb-1'>${f.feedback.comments}</p>
+                        <small>Grade: ${f.feedback.grade}</small>
+                    </div>`;
+                });
+            }
+            if (resultsHtml === '<div class="list-group">') {
+                resultsHtml += '<div class="list-group-item">No results found.</div>';
+            }
             resultsHtml += '</div>';
-            document.querySelector('.card-body').innerHTML = resultsHtml;
+            // Show results in the search results card, not in the form card
+            document.querySelector('.card + .card .card-body').innerHTML = resultsHtml;
         }
     });
 }
