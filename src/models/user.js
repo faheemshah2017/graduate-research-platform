@@ -32,6 +32,9 @@ const userSchema = new mongoose.Schema({
     },
     advisor: {
         type: String
+    },
+    photo: {
+        type: String
     }
 });
 

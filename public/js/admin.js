@@ -362,17 +362,16 @@ function initializeDashboard() {
 // Load user profile page
 function loadProfile() {
     if (!currentUser) return;
-    
     const profileHtml = `
         <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
             <h1 class="h2">My Profile</h1>
         </div>
-        
         <div class="row">
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body text-center">
-                        <img src="https://via.placeholder.com/150" class="rounded-circle mb-3" alt="Profile Picture">
+                        <img src="${currentUser.photo ? '/uploads/' + currentUser.photo : 'https://via.placeholder.com/150'}" class="rounded-circle mb-3" alt="Profile Picture" id="profilePhotoPreview" style="width:150px;height:150px;object-fit:cover;">
+                        <input type="file" id="profilePhotoInput" accept="image/*" class="form-control mb-2">
                         <h5>${currentUser.name}</h5>
                         <p class="text-muted">${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}</p>
                     </div>
@@ -380,9 +379,7 @@ function loadProfile() {
             </div>
             <div class="col-md-8">
                 <div class="card">
-                    <div class="card-header">
-                        Profile Information
-                    </div>
+                    <div class="card-header">Profile Information</div>
                     <div class="card-body">
                         <form id="profileForm">
                             <div class="mb-3">
@@ -418,13 +415,58 @@ function loadProfile() {
             </div>
         </div>
     `;
-    
     document.getElementById('content-container').innerHTML = profileHtml;
-    
+    // Preview selected photo
+    document.getElementById('profilePhotoInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                document.getElementById('profilePhotoPreview').src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
     // Add form submit handler
-    document.getElementById('profileForm')?.addEventListener('submit', function(e) {
+    document.getElementById('profileForm')?.addEventListener('submit', async function(e) {
         e.preventDefault();
-        showAlert('Profile updated successfully!', 'success');
+        const formData = new FormData();
+        formData.append('name', document.getElementById('name').value);
+        formData.append('department', document.getElementById('department').value);
+        if (document.getElementById('advisor')) {
+            formData.append('advisor', document.getElementById('advisor').value);
+        }
+        if (document.getElementById('profilePhotoInput').files[0]) {
+            formData.append('photo', document.getElementById('profilePhotoInput').files[0]);
+        }
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        if (password) {
+            if (password !== confirmPassword) {
+                showAlert('Passwords do not match!', 'danger');
+                return;
+            }
+            formData.append('password', password);
+        }
+        // Add user id to formData for backend
+        formData.append('_id', currentUser._id);
+        try {
+            const res = await fetch(`/api/users/update-profile`, {
+                method: 'POST',
+                body: formData
+            });
+            if (res.ok) {
+                const updated = await res.json();
+                localStorage.setItem('grp_user', JSON.stringify(updated.user));
+                showAlert('Profile updated successfully!', 'success');
+                loadProfile();
+            } else {
+                const err = await res.json();
+                showAlert(err.error || 'Profile update failed', 'danger');
+            }
+        } catch {
+            showAlert('Profile update failed', 'danger');
+        }
     });
 }
 
