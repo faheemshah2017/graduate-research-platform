@@ -546,7 +546,7 @@ async function loadUserManagement() {
         <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
             <h1 class="h2">User Management</h1>
             <div class="btn-toolbar mb-2 mb-md-0">
-                <button class="btn btn-sm btn-primary" onclick="loadAddUserPage()">
+                <button class="btn btn-sm btn-primary" onclick="loadAddUserForm()">
                     <i class="fas fa-user-plus me-1"></i> Add New User
                 </button>
             </div>
@@ -769,34 +769,49 @@ function toggleRoleFields() {
 // Handle form submission
 async function submitUserForm(event) {
     event.preventDefault();
-    // Get form values
+    // Only read fields from <form id="addUserForm">
+    const form = document.getElementById('addUserForm');
+    if (!form) {
+        showAlert('Form not found. Please reload the page.', 'danger');
+        return;
+    }
+    const firstName = form.querySelector('#firstName')?.value.trim() || '';
+    const lastName = form.querySelector('#lastName')?.value.trim() || '';
+    const email = form.querySelector('#email')?.value.trim() || '';
+    const role = form.querySelector('#role')?.value || '';
+    const department = form.querySelector('#department')?.value || '';
+    const studentId = form.querySelector('#studentId')?.value || '';
+    const password = form.querySelector('#password')?.value || '';
+    const confirmPassword = form.querySelector('#confirmPassword')?.value || '';
+    const active = form.querySelector('#active')?.checked || false;
+
+    // Validate required fields
+    if (!firstName || !lastName || !email || !role || !department || !password || !confirmPassword) {
+        showAlert('Please fill all required fields.', 'danger');
+        return;
+    }
+    if (password !== confirmPassword) {
+        showAlert('Passwords do not match!', 'danger');
+        return;
+    }
+    if (password.length < 8) {
+        showAlert('Password must be at least 8 characters!', 'danger');
+        return;
+    }
+    if (role === 'student' && !studentId) {
+        showAlert('Student ID is required!', 'danger');
+        return;
+    }
+    // Prepare user data
     const userData = {
-        name: document.getElementById('userName').value.trim(),
-        email: document.getElementById('userEmail').value.trim(),
-        role: document.getElementById('userRole').value,
-        department: document.getElementById('userDepartment').value,
-        password: document.getElementById('userPassword').value,
-        active: document.getElementById('userActive').checked,
-        sendEmail: document.getElementById('sendWelcomeEmail').checked
+        name: `${firstName} ${lastName}`,
+        email,
+        role,
+        department,
+        password,
+        active,
+        studentId: role === 'student' ? studentId : undefined
     };
-    // Validate passwords match
-    if (userData.password !== document.getElementById('confirmPassword').value) {
-        showAlert('Passwords do not match', 'danger');
-        return;
-    }
-    // Validate email format
-    if (!validateEmail(userData.email)) {
-        showAlert('Please enter a valid email address', 'danger');
-        return;
-    }
-    // Add role-specific data
-    if (userData.role === 'student') {
-        userData.studentId = document.getElementById('studentId').value;
-        userData.enrollmentDate = document.getElementById('enrollmentDate').value;
-    } else if (userData.role === 'faculty') {
-        userData.position = document.getElementById('facultyPosition').value;
-        userData.office = document.getElementById('facultyOffice').value;
-    }
     // Send to backend API
     try {
         const res = await fetch('/api/auth/register', {
@@ -805,7 +820,7 @@ async function submitUserForm(event) {
             body: JSON.stringify(userData)
         });
         if (res.ok) {
-            showAlert(`Successfully created ${userData.role} account for ${userData.name}`, 'success');
+            showAlert(`Successfully created ${role} account for ${userData.name}`, 'success');
             setTimeout(() => loadUserManagement(), 1500);
         } else {
             const err = await res.json();
@@ -1702,10 +1717,7 @@ function loadAddUserForm() {
     document.getElementById('content-container').innerHTML = html;
 
     // Add form submission handler
-    document.getElementById('addUserForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        registerNewUser();
-    });
+    document.getElementById('addUserForm').addEventListener('submit', submitUserForm);
 
     // Add password toggle
     document.getElementById('togglePassword').addEventListener('click', function() {
