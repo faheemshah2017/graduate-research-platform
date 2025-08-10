@@ -59,7 +59,7 @@ router.get('/:id/download', async (req, res) => {
   try {
     const doc = await Document.findById(req.params.id);
     if (!doc || !doc.fileUrl) return res.status(404).send('File not found');
-    const filePath = path.join(__dirname, '../../uploads', doc.fileUrl);
+    const filePath = path.join(__dirname, '../..', doc.fileUrl);
     res.download(filePath, doc.title + (path.extname(doc.fileUrl) || '.pdf'));
   } catch (err) {
     res.status(500).send('Download error');
@@ -71,7 +71,7 @@ router.get('/:id/view', async (req, res) => {
   try {
     const doc = await Document.findById(req.params.id);
     if (!doc || !doc.fileUrl) return res.status(404).send('File not found');
-    const filePath = path.join(__dirname, '../../uploads', doc.fileUrl);
+    const filePath = path.join(__dirname, '../..', doc.fileUrl);
     res.sendFile(filePath);
   } catch (err) {
     res.status(500).send('View error');

@@ -167,16 +167,6 @@ function initializeDashboard() {
     let dashboardHtml = `
         <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
             <h1 class="h2">Dashboard</h1>
-            <div class="btn-toolbar mb-2 mb-md-0">
-                <div class="btn-group me-2">
-                    <button type="button" class="btn btn-sm btn-outline-secondary">Share</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
-                    <span data-feather="calendar"></span>
-                    This week
-                </button>
-            </div>
         </div>
         
         <div id="alert-container"></div>
@@ -1079,15 +1069,7 @@ async function loadArchiveDocuments() {
 function downloadDocument(docId, filename) {
     // In a real app, this would fetch from your API
     console.log(`Downloading document ${docId}: ${filename}`);
-    
-    // Simulate download (replace with actual API call)
-    const link = document.createElement('a');
-    link.href = `/api/documents/download/${docId}`;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
+    window.open(`/api/documents/${docId}/download`, '_blank');
     // Track download in your analytics
     trackDocumentAction('download', docId);
 }
@@ -1096,12 +1078,7 @@ function downloadDocument(docId, filename) {
 function viewDocument(docId) {
     // In a real app, this would fetch from your API
     console.log(`Viewing document ${docId}`);
-    
-    // Open in a new tab with your document viewer
-    window.open(`/document-viewer.html?id=${docId}`, '_blank');
-    
-    // Track view in your analytics
-    trackDocumentAction('view', docId);
+    window.open(`/api/documents/${docId}/view`, '_blank');    
 }
 
 // Search archive function
